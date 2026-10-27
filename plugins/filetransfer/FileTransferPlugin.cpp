@@ -446,7 +446,7 @@ QString FileTransferPlugin::destinationDirectory() const
 
 FileTransferPlugin::LockedFileAction FileTransferPlugin::queryLockedFileAction(const QString& fileName)
 {
-	qApp->setQuitOnLastWindowClosed(false);
+	QApplication::setQuitOnLastWindowClosed(false);
 
 	const auto processId = VeyonCore::platform().filesystemFunctions().findFileLockingProcess(fileName);
 	const auto applicationName = VeyonCore::platform().coreFunctions().getApplicationName(processId);
