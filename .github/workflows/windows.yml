@@ -9,7 +9,11 @@ permissions:
 
 jobs:
   build-windows:
-    runs-on: ubuntu-24.04
+    runs-on: windows-2022
+
+    defaults:
+      run:
+        shell: msys2 {0}
 
     steps:
       - name: Checkout Veyon
@@ -17,21 +21,51 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Download Windows build environment
-        run: |
-          docker pull registry.gitlab.com/veyon/ci-mingw-w64:main
+      - name: Set up Windows build tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-5compat
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-qt6-httpserver
+            mingw-w64-ucrt-x86_64-qca-qt6
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-libvncserver
+            mingw-w64-ucrt-x86_64-lzo2
+            mingw-w64-ucrt-x86_64-libjpeg-turbo
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-openldap
+            mingw-w64-ucrt-x86_64-cyrus-sasl
 
-      - name: Build Veyon Windows x64
+      - name: Configure Veyon
         run: |
-          docker run --rm \
-            -v "$GITHUB_WORKSPACE:/src" \
-            -w /src \
-            registry.gitlab.com/veyon/ci-mingw-w64:main \
-            bash -lc "git config --global --add safe.directory /src && .ci/windows/build.sh x86_64"
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+            -DWITH_QT6=ON \
+            -DWITH_PCH=OFF \
+            -DWITH_TRANSLATIONS=OFF \
+            -DWITH_UNITY_BUILD=OFF
 
-      - name: Upload Windows binaries
+      - name: Compile Veyon
+        run: |
+          cmake --build build --parallel 2
+
+      - name: Upload compiled files
         uses: actions/upload-artifact@v4
         with:
-          name: veyon-windows-x64
-          path: veyon-win*
-          if-no-files-found: error
+          name: veyon-windows-test
+          path: |
+            build/**/veyon-*.exe
+            build/**/veyon-core.dll
+            build/**/plugins/*.dll
+          if-no-files-found: warn
