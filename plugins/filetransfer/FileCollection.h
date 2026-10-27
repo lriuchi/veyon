@@ -23,8 +23,8 @@
  */
 
 #pragma once
-
 #include <QFile>
+#include <QUuid>
 
 struct FileCollection {
 	enum class State {
